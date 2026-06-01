@@ -85,13 +85,24 @@
 
   /* ---------- Plot card ---------- */
   .plot-card { padding: 18px 20px 14px; min-width: 0; }
-  .plot-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 6px; }
+  .plot-head { display: flex; flex-direction: column; gap: 13px; margin-bottom: 6px; }
   .plot-title { font-size: 16px; font-weight: 600; letter-spacing: -.01em; margin: 0; }
   .plot-sub { font-size: 12.5px; color: var(--ink-faint); margin: 2px 0 0; }
-  .legend { display: flex; flex-wrap: wrap; gap: 6px 6px; justify-content: flex-end; max-width: 320px; }
+  .head-controls { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px 18px; width: 100%; }
+  .endpoint-filter { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); font-weight: 500; }
+  .endpoint-filter select {
+    font-family: var(--sans); font-size: 12.5px; color: var(--ink);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 7px;
+    padding: 6px 26px 6px 10px; cursor: pointer; max-width: 320px;
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238595a4' stroke-width='2.5'><path d='m6 9 6 6 6-6'/></svg>");
+    background-repeat: no-repeat; background-position: right 9px center;
+  }
+  .endpoint-filter select:hover { border-color: var(--ink-faint); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; flex: 1 1 100%; }
   .legend button {
     appearance: none; cursor: pointer; font-family: var(--sans);
-    display: inline-flex; align-items: center; gap: 6px;
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
     font-size: 11.5px; font-weight: 500; color: var(--ink-soft);
     background: var(--panel); border: 1px solid var(--line);
     border-radius: 20px; padding: 4px 10px 4px 8px; transition: all .14s;
@@ -104,6 +115,14 @@
   .plot-wrap svg { display: block; width: 100%; height: 100%; }
   .pt { cursor: pointer; transition: opacity .12s; }
   .pt.dim { opacity: .12 !important; }
+
+  /* loading / error overlay */
+  .plot-status {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; text-align: center; color: var(--ink-faint);
+    font-size: 13.5px; padding: 24px; line-height: 1.5;
+  }
+  .plot-status.err { color: #b23a48; }
 
   /* tooltip */
   .tooltip {
@@ -146,6 +165,8 @@
   .metric { border: 1px solid var(--line); border-radius: 8px; padding: 7px 11px; flex: 1; min-width: 84px; }
   .metric .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-faint); }
   .metric .v { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--ink); margin-top: 1px; }
+  .ab-endpoint { font-size: 13.5px; color: var(--ink); margin: 0 0 16px; line-height: 1.4; }
+  .ab-endpoint-k { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-faint); font-weight: 600; margin-bottom: 3px; }
   .ab-abstract-label { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-faint); font-weight: 600; margin: 0 0 6px; }
   .ab-abstract { font-size: 13.5px; color: var(--ink-soft); line-height: 1.62; margin: 0 0 18px; text-wrap: pretty; }
   .ab-pmid {
@@ -199,7 +220,13 @@
           <h1 class="plot-title" id="plotTitle">—</h1>
           <p class="plot-sub" id="plotSub">—</p>
         </div>
-        <div class="legend" id="legend"></div>
+        <div class="head-controls">
+          <label class="endpoint-filter">
+            <span>Endpoint</span>
+            <select id="endpointSelect" aria-label="Filter by endpoint"></select>
+          </label>
+          <div class="legend" id="legend"></div>
+        </div>
       </div>
       <div class="plot-wrap" id="plotWrap">
         <svg id="plot" preserveAspectRatio="none" aria-label="Citation scatter plot"></svg>
@@ -220,7 +247,7 @@
     </section>
   </main>
 
-  <script src="data.js"></script>
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
