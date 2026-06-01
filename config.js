@@ -44,6 +44,19 @@ const CONFIG = {
 
   subtitle: "Reported outcomes by treatment modality over follow-up time",
 
+  // Outcome families shown as the top-right toggle. Each raw `endpoint` string
+  // in the CSV is sorted into the FIRST category whose `test` matches it, so
+  // new data is classified automatically. The catch-all (test: always true)
+  // must stay last. Reorder/rename freely; the first one is selected on load.
+  outcomes: [
+    { id: "biochemical", label: "Biochemical / PSA", test: (e) => /biochem|psa/i.test(e) },
+    { id: "css",         label: "Cancer-specific",   test: (e) => /cancer[- ]specific/i.test(e) },
+    { id: "os",          label: "Overall survival",  test: (e) => /overall survival/i.test(e) },
+    { id: "mets",        label: "Metastasis-free",   test: (e) => /metasta/i.test(e) },
+    { id: "mortality",   label: "Mortality",         test: (e) => /mortality/i.test(e) },
+    { id: "clinical",    label: "Clinical / other",  test: () => true },
+  ],
+
   // Fixed colours for the known treatments. Any treatment not listed here is
   // auto-assigned a colour from FALLBACK_PALETTE (stable per name).
   treatmentColors: {
@@ -72,6 +85,15 @@ function colorForTreatment(name) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
   return FALLBACK_PALETTE[h % FALLBACK_PALETTE.length];
+}
+
+// Sort a raw endpoint string into one of CONFIG.outcomes (returns its id).
+function classifyOutcome(endpoint) {
+  const e = String(endpoint || "");
+  for (const o of CONFIG.outcomes) {
+    if (o.test(e)) return o.id;
+  }
+  return CONFIG.outcomes[CONFIG.outcomes.length - 1].id;
 }
 
 // "10-year" → 10 ; "" / unparseable → null

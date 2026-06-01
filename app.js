@@ -20,9 +20,9 @@
   let TABS = [];                 // [{...cfgTab, points:[]}]
   let activeTab = null;
   let allTreatments = [];        // ordered list present in data
-  let allEndpoints = [];         // ordered list present in data
+  let presentOutcomes = [];      // outcome categories present in data (config order)
   let hiddenTreat = new Set();   // hidden treatment names
-  let endpointFilter = "__all";
+  let outcomeFilter = null;      // selected outcome id
   let selectedId = null;
 
   let X_DOMAIN = [0, 20];
@@ -69,7 +69,7 @@
     // init tabs
     TABS = CONFIG.tabs.map((t) => Object.assign({}, t, { points: [] }));
     const treatSeen = new Map();   // name -> order
-    const endSeen = new Map();
+    const outcomeSeen = new Set(); // outcome ids present
     let maxTp = 0;
     const tpSet = new Set();
 
@@ -83,10 +83,11 @@
       if (tp == null || val == null) return; // can't plot
       const treatment = (r[ix.treatment] || "other").trim() || "other";
       const endpoint = (r[ix.endpoint] || "").trim();
+      const outcome = classifyOutcome(endpoint);
       const id = (r[ix.pmid] || "p") + "-" + rowIdx;
 
       if (!treatSeen.has(treatment)) treatSeen.set(treatment, treatSeen.size);
-      if (endpoint && !endSeen.has(endpoint)) endSeen.set(endpoint, endSeen.size);
+      outcomeSeen.add(outcome);
       if (tp > maxTp) maxTp = tp;
       tpSet.add(tp);
 
@@ -97,6 +98,7 @@
         abstract: (r[ix.abstract] || "").trim(),
         group: tab.label,
         endpoint,
+        outcome,
         timepoint: r[ix.timepoint].trim(),
         valueRaw: r[ix.value].trim(),
         treatment,
@@ -116,7 +118,12 @@
       if (ib !== -1) return 1;
       return treatSeen.get(a) - treatSeen.get(b);
     });
-    allEndpoints = [...endSeen.keys()].sort((a, b) => a.localeCompare(b));
+
+    // outcome categories present, in config order; default to the first
+    presentOutcomes = CONFIG.outcomes.filter((o) => outcomeSeen.has(o.id));
+    if (!outcomeFilter || !presentOutcomes.some((o) => o.id === outcomeFilter)) {
+      outcomeFilter = presentOutcomes.length ? presentOutcomes[0].id : null;
+    }
 
     // x domain + ticks
     X_DOMAIN = [0, Math.max(5, Math.ceil(maxTp))];
@@ -144,23 +151,22 @@
     });
   }
 
-  function buildEndpointSelect() {
-    const sel = document.getElementById("endpointSelect");
-    sel.innerHTML = "";
-    const optAll = document.createElement("option");
-    optAll.value = "__all";
-    optAll.textContent = "All endpoints";
-    sel.appendChild(optAll);
-    allEndpoints.forEach((e) => {
-      const o = document.createElement("option");
-      o.value = e; o.textContent = e;
-      sel.appendChild(o);
-    });
-    sel.value = endpointFilter;
-    sel.addEventListener("change", () => {
-      endpointFilter = sel.value;
-      selectedId = null;
-      render(); renderRefs(); updateMeta(); renderDetailEmpty();
+  function buildOutcomeToggle() {
+    const seg = document.getElementById("outcomeSeg");
+    seg.innerHTML = "";
+    presentOutcomes.forEach((o) => {
+      const b = document.createElement("button");
+      b.textContent = o.label;
+      b.setAttribute("aria-pressed", o.id === outcomeFilter ? "true" : "false");
+      b.addEventListener("click", () => {
+        if (outcomeFilter === o.id) return;
+        outcomeFilter = o.id;
+        selectedId = null;
+        [...seg.children].forEach((c) => c.setAttribute("aria-pressed", "false"));
+        b.setAttribute("aria-pressed", "true");
+        render(); renderRefs(); updateMeta(); renderDetailEmpty();
+      });
+      seg.appendChild(b);
     });
   }
 
@@ -191,7 +197,7 @@
   function visiblePoints() {
     return activeTab.points.filter((d) =>
       !hiddenTreat.has(d.treatment) &&
-      (endpointFilter === "__all" || d.endpoint === endpointFilter));
+      (outcomeFilter === null || d.outcome === outcomeFilter));
   }
 
   function renderHead() {
@@ -240,7 +246,14 @@
     yt.textContent = CONFIG.axis.yLabel; svg.appendChild(yt);
 
     const g = el("g", {});
-    visiblePoints().forEach((d) => {
+    const pts = visiblePoints();
+    if (!pts.length) {
+      showStatus("No “" + (presentOutcomes.find((o) => o.id === outcomeFilter) || {}).label +
+        "” data reported for this risk group.", false);
+    } else {
+      clearStatus();
+    }
+    pts.forEach((d) => {
       const c = el("circle", {
         class: "pt", cx: sx(d.x), cy: sy(d.y), r: 6,
         fill: d.color, "fill-opacity": 0.8, stroke: "#fff", "stroke-width": 1.5,
@@ -369,7 +382,7 @@
       if (!nonEmpty.length) throw new Error("No plottable rows found in CSV.");
       activeTab = TABS[0];
       clearStatus();
-      buildTabs(); buildEndpointSelect(); buildLegend();
+      buildTabs(); buildOutcomeToggle(); buildLegend();
       renderHead(); render(); renderRefs(); renderDetailEmpty();
     } catch (err) {
       showStatus("Could not load " + CONFIG.csvFile + ".\n" + err.message +

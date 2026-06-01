@@ -38,9 +38,10 @@
   header.app-bar {
     display: flex;
     align-items: center;
-    gap: 18px;
-    padding: 0 28px;
-    height: 60px;
+    gap: 14px 18px;
+    flex-wrap: wrap;
+    padding: 10px 28px;
+    min-height: 60px;
     background: var(--panel);
     border-bottom: 1px solid var(--line);
     position: sticky;
@@ -56,19 +57,34 @@
     font-size: 12px; color: var(--ink-faint); font-weight: 500;
     border-left: 1px solid var(--line); padding-left: 10px; letter-spacing: .01em;
   }
-  .tabs { display: flex; gap: 2px; margin-left: 14px; }
-  .tab {
-    appearance: none; border: 0; background: transparent; cursor: pointer;
-    font-family: var(--sans); font-size: 13.5px; font-weight: 500;
-    color: var(--ink-soft); padding: 8px 15px; border-radius: 7px;
-    position: relative; transition: background .15s, color .15s;
-  }
-  .tab:hover { background: var(--line-soft); color: var(--ink); }
-  .tab[aria-selected="true"] { color: var(--accent); background: var(--accent-weak); }
-  .app-bar .spacer { flex: 1; }
+  .app-bar .spacer { flex: 1; min-width: 12px; }
   .meta-chip {
     font-family: var(--mono); font-size: 11.5px; color: var(--ink-faint);
-    border: 1px solid var(--line); border-radius: 6px; padding: 4px 9px;
+    border: 1px solid var(--line); border-radius: 6px; padding: 4px 9px; white-space: nowrap;
+  }
+
+  /* segmented toggles */
+  .strat-toggle, .outcome-toggle { display: inline-flex; align-items: center; gap: 10px; }
+  .outcome-toggle { margin-left: auto; }
+  .toggle-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--ink-faint); font-weight: 600;
+  }
+  .seg {
+    display: inline-flex; flex-wrap: wrap; gap: 3px;
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 9px; padding: 3px;
+  }
+  .seg button {
+    appearance: none; border: 0; cursor: pointer; font-family: var(--sans);
+    font-size: 12.5px; font-weight: 500; color: var(--ink-soft);
+    background: transparent; border-radius: 6px; padding: 6px 11px;
+    white-space: nowrap; transition: background .14s, color .14s, box-shadow .14s;
+  }
+  .seg button:hover { color: var(--ink); }
+  .seg button[aria-pressed="true"], .seg button[aria-selected="true"] {
+    background: var(--panel); color: var(--accent); font-weight: 600;
+    box-shadow: 0 1px 2px rgba(21,33,46,.10);
   }
 
   /* ---------- Layout ---------- */
@@ -86,19 +102,10 @@
   /* ---------- Plot card ---------- */
   .plot-card { padding: 18px 20px 14px; min-width: 0; }
   .plot-head { display: flex; flex-direction: column; gap: 13px; margin-bottom: 6px; }
+  .plot-head-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
   .plot-title { font-size: 16px; font-weight: 600; letter-spacing: -.01em; margin: 0; }
   .plot-sub { font-size: 12.5px; color: var(--ink-faint); margin: 2px 0 0; }
   .head-controls { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px 18px; width: 100%; }
-  .endpoint-filter { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); font-weight: 500; }
-  .endpoint-filter select {
-    font-family: var(--sans); font-size: 12.5px; color: var(--ink);
-    background: var(--panel); border: 1px solid var(--line); border-radius: 7px;
-    padding: 6px 26px 6px 10px; cursor: pointer; max-width: 320px;
-    appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238595a4' stroke-width='2.5'><path d='m6 9 6 6 6-6'/></svg>");
-    background-repeat: no-repeat; background-position: right 9px center;
-  }
-  .endpoint-filter select:hover { border-color: var(--ink-faint); }
   .legend { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; flex: 1 1 100%; }
   .legend button {
     appearance: none; cursor: pointer; font-family: var(--sans);
@@ -204,27 +211,27 @@
 </head>
 <body>
   <header class="app-bar">
-    <div class="brand">
-      <span class="mark">Onco<b>Outcome</b></span>
-      <span class="tag">Citation Explorer</span>
+    <div class="strat-toggle" role="group" aria-label="Risk stratification">
+      <span class="toggle-label">Stratification</span>
+      <div class="seg" id="tabs" role="tablist" aria-label="Risk cohorts"></div>
     </div>
-    <nav class="tabs" id="tabs" role="tablist" aria-label="Risk cohorts"></nav>
-    <span class="spacer"></span>
-    <span class="meta-chip" id="metaChip">—</span>
+    <div class="outcome-toggle" role="group" aria-label="Outcome measure">
+      <span class="toggle-label">Outcome</span>
+      <div class="seg" id="outcomeSeg"></div>
+    </div>
   </header>
 
   <main>
     <section class="card plot-card" aria-label="Scatter plot">
       <div class="plot-head">
-        <div>
-          <h1 class="plot-title" id="plotTitle">—</h1>
-          <p class="plot-sub" id="plotSub">—</p>
+        <div class="plot-head-top">
+          <div>
+            <h1 class="plot-title" id="plotTitle">—</h1>
+            <p class="plot-sub" id="plotSub">—</p>
+          </div>
+          <span class="meta-chip" id="metaChip">—</span>
         </div>
         <div class="head-controls">
-          <label class="endpoint-filter">
-            <span>Endpoint</span>
-            <select id="endpointSelect" aria-label="Filter by endpoint"></select>
-          </label>
           <div class="legend" id="legend"></div>
         </div>
       </div>
