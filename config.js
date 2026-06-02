@@ -1,78 +1,147 @@
 /* ============================================================================
-   OncoOutcome — configuration
+   OncoOutcome — configuration registry
    ----------------------------------------------------------------------------
-   ◆ TO UPDATE THE PLOTS WITH NEW DATA:
-     Just replace the file  data.csv  in this folder with your new export.
-     The app reads it on load and rebuilds every plot automatically.
-     You do NOT need to edit any code for new rows.
+   ◆ HOW IT WORKS NOW
+     This file defines ONE config per cancer type, in CANCERS below.
+     Each HTML page sets   window.__CANCER__ = "prostate" | "breast" | …
+     BEFORE loading this file; we then expose the matching config as CONFIG
+     (so app.js is unchanged) and CANCER_MENU drives the sidebar dropdown.
 
-   Your CSV must keep these columns (header row, any order):
-     pmid, title, abstract, group, endpoint, timepoint, value, treatment
-       • group     → which tab the point belongs to (see TABS below)
-       • timepoint → X axis; any text containing a number of years
-                      e.g. "5-year", "10-year"  → 5, 10
-       • value     → Y axis; a percentage  e.g. "84.20%" → 84.2
-       • treatment → point colour (see TREATMENT_COLORS below)
-       • endpoint  → the outcome measure (shown in tooltip / detail / filter)
+   ◆ TO UPDATE THE PLOTS WITH NEW DATA
+     Replace the cancer's CSV (data.csv for prostate, breast.csv for breast).
+     The app reads it on load and rebuilds every plot automatically — no code
+     changes needed for new rows.
 
-   You only edit THIS file if you want to rename tabs, recolour treatments,
-   or change the axis labels.
+     Each CSV keeps these columns (header row, any order):
+       pmid, title, abstract, group, endpoint, timepoint, value, treatment
+         • group     → which tab the point belongs to (matched against `match`)
+         • timepoint → X axis; any text containing a number of years
+         • value     → Y axis; a percentage  e.g. "84.20%" → 84.2
+         • treatment → point colour (see treatmentColors)
+         • endpoint  → the outcome measure (tooltip / detail / filter)
+
+   ◆ TO ADD A CANCER TYPE
+     1. Add an entry to CANCERS (tabs, outcomes, treatmentColors, csvFile…).
+     2. Add it to CANCER_MENU with the page it lives on.
+     3. Create the page (copy breast.html, change window.__CANCER__).
    ========================================================================== */
 
-const CONFIG = {
-  csvFile: "data.csv",
+const CANCERS = {
 
-  axis: {
-    xLabel: "Follow-up time (years)",
-    // Endpoints mix "…-free survival" (higher = better) with a few
-    // "recurrence / failure / mortality" measures (higher = worse), so the
-    // axis is left neutral. Use the endpoint filter to compare like with like.
-    yLabel: "Reported outcome rate (%)",
-    yMin: 0,
-    yMax: 100,
+  /* ----------------------------------------------------------- PROSTATE ---- */
+  prostate: {
+    key: "prostate",
+    label: "Prostate cancer",
+    page: "index.html",
+    csvFile: "data.csv",
+
+    axis: {
+      xLabel: "Follow-up time (years)",
+      yLabel: "Reported outcome rate (%)",
+      yMin: 0,
+      yMax: 100,
+    },
+
+    tabs: [
+      { id: "low",          label: "Low-risk",          match: "low",
+        title: "Low-risk localized prostate cancer" },
+      { id: "intermediate", label: "Intermediate-risk", match: "intermediate",
+        title: "Intermediate-risk localized prostate cancer" },
+      { id: "high",         label: "High-risk",         match: "high",
+        title: "High-risk localized prostate cancer" },
+    ],
+
+    subtitle: "Reported outcomes by treatment modality over follow-up time",
+
+    outcomes: [
+      { id: "biochemical", label: "Biochemical / PSA", test: (e) => /biochem|psa/i.test(e) },
+      { id: "css",         label: "Cancer-specific",   test: (e) => /cancer[- ]specific/i.test(e) },
+      { id: "os",          label: "Overall survival",  test: (e) => /overall survival/i.test(e) },
+      { id: "mets",        label: "Metastasis-free",   test: (e) => /metasta/i.test(e) },
+      { id: "mortality",   label: "Mortality",         test: (e) => /mortality/i.test(e) },
+      { id: "clinical",    label: "Clinical / other",  test: () => true },
+    ],
+
+    treatmentColors: {
+      "Radical Prostatectomy":    "#4e79a7",
+      "Radiotherapy":             "#f28e2b",
+      "ADT + Std EBRT":           "#59a14f",
+      "ADT + Hypofx EBRT":        "#76b7b2",
+      "ADT + EBRT + HDR Brachy":  "#b07aa1",
+      "ADT + EBRT + LDR Brachy":  "#ff9da7",
+      "EBRT + LDR Brachy":        "#edc948",
+      "Brachytherapy":            "#9c755f",
+      "ADT + LDR Brachy":         "#e15759",
+      "Cryotherapy":              "#17becf",
+      "other":                    "#9aa6b2",
+    },
   },
 
-  // One tab per entry. `match` is compared (lowercased) against the CSV `group`.
-  tabs: [
-    { id: "low",          label: "Low-risk",          match: "low",
-      title: "Low-risk localized prostate cancer" },
-    { id: "intermediate", label: "Intermediate-risk", match: "intermediate",
-      title: "Intermediate-risk localized prostate cancer" },
-    { id: "high",         label: "High-risk",         match: "high",
-      title: "High-risk localized prostate cancer" },
-  ],
+  /* ------------------------------------------------------------- BREAST ---- */
+  breast: {
+    key: "breast",
+    label: "Breast cancer",
+    page: "breast.html",
+    csvFile: "breast.csv",
 
-  subtitle: "Reported outcomes by treatment modality over follow-up time",
+    axis: {
+      xLabel: "Follow-up time (years)",
+      yLabel: "Reported outcome rate (%)",
+      yMin: 0,
+      yMax: 100,
+    },
 
-  // Outcome families shown as the top-right toggle. Each raw `endpoint` string
-  // in the CSV is sorted into the FIRST category whose `test` matches it, so
-  // new data is classified automatically. The catch-all (test: always true)
-  // must stay last. Reorder/rename freely; the first one is selected on load.
-  outcomes: [
-    { id: "biochemical", label: "Biochemical / PSA", test: (e) => /biochem|psa/i.test(e) },
-    { id: "css",         label: "Cancer-specific",   test: (e) => /cancer[- ]specific/i.test(e) },
-    { id: "os",          label: "Overall survival",  test: (e) => /overall survival/i.test(e) },
-    { id: "mets",        label: "Metastasis-free",   test: (e) => /metasta/i.test(e) },
-    { id: "mortality",   label: "Mortality",         test: (e) => /mortality/i.test(e) },
-    { id: "clinical",    label: "Clinical / other",  test: () => true },
-  ],
+    // Stratified by molecular subtype.
+    tabs: [
+      { id: "hrpos", label: "HR+/HER2−",       match: "hr+",
+        title: "HR-positive / HER2-negative breast cancer" },
+      { id: "her2",  label: "HER2+",           match: "her2-positive",
+        title: "HER2-positive breast cancer" },
+      { id: "tnbc",  label: "Triple-negative", match: "triple",
+        title: "Triple-negative breast cancer" },
+    ],
 
-  // Fixed colours for the known treatments. Any treatment not listed here is
-  // auto-assigned a colour from FALLBACK_PALETTE (stable per name).
-  treatmentColors: {
-    "Radical Prostatectomy":    "#4e79a7",
-    "Radiotherapy":             "#f28e2b",
-    "ADT + Std EBRT":           "#59a14f",
-    "ADT + Hypofx EBRT":        "#76b7b2",
-    "ADT + EBRT + HDR Brachy":  "#b07aa1",
-    "ADT + EBRT + LDR Brachy":  "#ff9da7",
-    "EBRT + LDR Brachy":        "#edc948",
-    "Brachytherapy":            "#9c755f",
-    "ADT + LDR Brachy":         "#e15759",
-    "Cryotherapy":              "#17becf",
-    "other":                    "#9aa6b2",
+    subtitle: "Illustrative placeholder data — replace breast.csv with your own export",
+
+    outcomes: [
+      { id: "os",   label: "Overall survival", test: (e) => /overall survival/i.test(e) },
+      { id: "idfs", label: "Invasive DFS",     test: (e) => /invasive disease|disease[- ]free|idfs/i.test(e) },
+      { id: "drfs", label: "Distant RFS",      test: (e) => /distant/i.test(e) },
+      { id: "lrfs", label: "Locoregional",     test: (e) => /locoreg|local recurrence/i.test(e) },
+      { id: "bcss", label: "Cancer-specific",  test: (e) => /cancer[- ]specific/i.test(e) },
+      { id: "clinical", label: "Clinical / other", test: () => true },
+    ],
+
+    treatmentColors: {
+      "Endocrine Therapy":            "#4e79a7",
+      "CDK4/6 Inhibitor + Endocrine": "#f28e2b",
+      "Adjuvant Chemo + Endocrine":   "#59a14f",
+      "Extended Endocrine":           "#76b7b2",
+      "Trastuzumab + Chemo":          "#b07aa1",
+      "Trastuzumab + Pertuzumab":     "#ff9da7",
+      "T-DM1 (adjuvant)":             "#edc948",
+      "Neoadjuvant Chemo + Anti-HER2":"#e15759",
+      "Neoadjuvant Chemo":            "#9c755f",
+      "Chemo + Immunotherapy":        "#17becf",
+      "Adjuvant Capecitabine":        "#af7aa1",
+      "Surgery + RT":                 "#bab0ac",
+      "other":                        "#9aa6b2",
+    },
   },
 };
+
+/* Order shown in the sidebar dropdown. `page: null` + `soon: true` renders a
+   disabled "Soon" item that can't be selected yet. */
+const CANCER_MENU = [
+  { key: "prostate",   label: "Prostate cancer",   page: "index.html" },
+  { key: "breast",     label: "Breast cancer",     page: "breast.html" },
+  { key: "lung",       label: "Lung cancer",       page: null, soon: true },
+  { key: "colorectal", label: "Colorectal cancer", page: null, soon: true },
+];
+
+/* Pick the active config. Each page sets window.__CANCER__ before this loads. */
+const ACTIVE_CANCER = (typeof window !== "undefined" && window.__CANCER__) || "prostate";
+const CONFIG = CANCERS[ACTIVE_CANCER] || CANCERS.prostate;
 
 const FALLBACK_PALETTE = [
   "#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f",
